@@ -4,6 +4,8 @@ import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactor
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.boot.web.servlet.ServletContextInitializer;
 import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -11,7 +13,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
+
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 
 public class HellobootApplication {
 
@@ -21,14 +25,30 @@ public class HellobootApplication {
         //아래처럼 추상화 계층을 사용하면 jetty 등을 사용할 수 있다.
         ServletWebServerFactory serverFactory = new TomcatServletWebServerFactory();
         WebServer webServer = serverFactory.getWebServer(servletContext -> {
+            HelloController helloController = new HelloController();
+
             servletContext.addServlet("hello", new HttpServlet() {
                 @Override
                 protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-                    resp.setStatus(HttpServletResponse.SC_OK);
-                    resp.setHeader("Content-Type","text/plain");
-                    resp.getWriter().print("Hello Servlet");
+                    // 인증, 보안, 다국어, 공통 기능
+                    if (req.getRequestURI().equals("/hello") && req.getMethod().equals(HttpMethod.GET.name())) {
+                        String name = req.getParameter("name");
+
+                        String ret = helloController.hello(name);
+
+                        resp.setStatus(HttpServletResponse.SC_OK);
+                        resp.setHeader(CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE);
+                        resp.getWriter().print(ret);
+                    }
+                    else if (req.getRequestURI().equals("/user")) {
+                        //
+                    }
+                    else {
+                        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    }
                 }
-            }).addMapping("/hello");
+                // 프론트 컨트롤러 (모든 책임을 다 먼저 받는다)
+            }).addMapping("/*");
         });
         webServer.start();
     }
