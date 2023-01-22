@@ -4,6 +4,7 @@ import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactor
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.boot.web.servlet.ServletContextInitializer;
 import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
+import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 
@@ -21,12 +22,14 @@ public class HellobootApplication {
 
     // 빈 서블릿 컨테이너 만들기 ( 내장형 톰캣 라이브러리가 이미 존재 )
     public static void main(String[] args) {
+        GenericApplicationContext applicationContext = new GenericApplicationContext();
+        applicationContext.registerBean(HelloController.class);
+        applicationContext.refresh();
+
         //TomcatServletWebServerFactory serverFactory = new TomcatServletWebServerFactory();
         //아래처럼 추상화 계층을 사용하면 jetty 등을 사용할 수 있다.
         ServletWebServerFactory serverFactory = new TomcatServletWebServerFactory();
         WebServer webServer = serverFactory.getWebServer(servletContext -> {
-            HelloController helloController = new HelloController();
-
             servletContext.addServlet("hello", new HttpServlet() {
                 @Override
                 protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -34,14 +37,11 @@ public class HellobootApplication {
                     if (req.getRequestURI().equals("/hello") && req.getMethod().equals(HttpMethod.GET.name())) {
                         String name = req.getParameter("name");
 
+                        HelloController helloController = applicationContext.getBean(HelloController.class);
                         String ret = helloController.hello(name);
 
-                        resp.setStatus(HttpServletResponse.SC_OK);
-                        resp.setHeader(CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE);
+                        resp.setContentType(MediaType.TEXT_PLAIN_VALUE);
                         resp.getWriter().print(ret);
-                    }
-                    else if (req.getRequestURI().equals("/user")) {
-                        //
                     }
                     else {
                         resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
